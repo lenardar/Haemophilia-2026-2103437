@@ -1,6 +1,7 @@
 # Only reviewed source code and environment files are eligible for Git.
 /*
 !/.gitignore
+!/README.md
 !/.Rprofile
 !/DESCRIPTION
 !/renv.lock
