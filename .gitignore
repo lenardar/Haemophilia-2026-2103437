@@ -1,0 +1,20 @@
+# Only reviewed source code and environment files are eligible for Git.
+/*
+!/.gitignore
+!/.Rprofile
+!/DESCRIPTION
+!/renv.lock
+!/rscript/
+/rscript/*
+!/rscript/*.R
+!/renv/
+/renv/*
+!/renv/activate.R
+!/renv/settings.json
+!/renv/.gitignore
+!/data_raw/
+/data_raw/*
+!/data_raw/.gitkeep
+!/data_interim/
+/data_interim/*
+!/data_interim/.gitkeep

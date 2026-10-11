@@ -1,0 +1,32 @@
+Package: hemophilia.analysis
+Title: Classification of Bleeding Risk in Adult Hemophilia Patients
+Version: 0.0.1
+Type: Project
+Description: Reproducible data processing, exploratory analysis and model training.
+Imports:
+    Boruta,
+    digest,
+    dplyr,
+    e1071,
+    future,
+    future.apply,
+    ggplot2,
+    glmnet,
+    kknn,
+    mlr3,
+    mlr3learners,
+    mlr3pipelines,
+    openxlsx,
+    parallelly,
+    patchwork,
+    ranger,
+    readr,
+    readxl,
+    renv,
+    rpart,
+    shapviz,
+    stringr,
+    themis,
+    tibble,
+    tidyr,
+    xgboost
