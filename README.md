@@ -25,6 +25,6 @@ Run the scripts in `rscript/` from the repository root:
 | `05_shap.R` | SHAP explanations |
 | `06_tables.R` | Manuscript and supplementary tables |
 
-Select training scenarios at the top of `03_modeling.R`. Run `original_full` and `smotenc_full` together, then run `original_restricted` separately. Set the corresponding run IDs in `report_config.R` before running scripts 04–06.
+Select training scenarios at the top of `03_modeling.R`. By default, `original_full`, `smotenc_full`, and `original_restricted` run together. Set both run IDs in `report_config.R` to the resulting run ID before running scripts 04–06.
 
 Training settings are defined in `analysis_config.R`. Generated results are saved under `output/`.
