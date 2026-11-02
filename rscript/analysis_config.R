@@ -254,7 +254,8 @@ analysis_config <- function(
         "v23",
         "v24"
       ),
-      incompatible_dose_units = "v41"
+      incompatible_dose_units = "v41",
+      ambiguous_duration = "v29"
     ),
     restricted_excluded = c(
       "v16_osteoarthritis",

@@ -99,10 +99,10 @@ restricted_inputs <- c(
 
 report <- start_report(
   project_dir, run_id, "evaluation",
-  c(prediction_file, restricted_inputs, file.path(
+  unique(c(prediction_file, restricted_inputs, file.path(
     project_dir, "output/logs/training", run_id,
     "manifest_finished.rds"
-  )), run_stamp
+  ))), run_stamp
 )
 
 calibration_fit <- function(
@@ -807,12 +807,12 @@ reference <- rbind(
   transform(
     baseline,
     net_benefit = treat_all,
-    strategy = "Treat all"
+    strategy = "Assess all"
   ),
   transform(
     baseline,
     net_benefit = 0,
-    strategy = "Treat none"
+    strategy = "Assess none"
   ),
   transform(
     dca_mean[
@@ -879,13 +879,13 @@ plot <- ggplot(
   ) +
   scale_linetype_manual(
     values = c(
-      "Treat all" = "dashed",
-      "Treat none" = "dotted",
+      "Assess all" = "dashed",
+      "Assess none" = "dotted",
       "Prevalence only" = "dotdash"
     ),
     breaks = c(
-      "Treat all",
-      "Treat none",
+      "Assess all",
+      "Assess none",
       "Prevalence only"
     )
   ) +
@@ -907,7 +907,7 @@ plot <- ggplot(
     color = "Model",
     linetype = "Reference",
     caption = paste(
-      "Prevalence only uses the original training-fold event proportion; it overlaps Treat all below that probability and Treat none above it.",
+      "Prevalence only uses the original training-fold event proportion; it overlaps Assess all below that probability and Assess none above it.",
       "Thresholds 0.00–0.99 are exploratory. Values below −0.05 are outside the display; full values are retained in the tables.",
       "Per-fold intervals from 2,000 paired patient resamples are in dca.csv; no confidence interval for the fold mean is shown.",
       sep = "\n"
@@ -1764,12 +1764,12 @@ if ("original_full" %in% dca_mean$scenario) {
     data.frame(
       threshold = dca_main_defaults$threshold,
       net_benefit = dca_main_defaults$treat_all,
-      strategy = "Treat all"
+      strategy = "Assess all"
     ),
     data.frame(
       threshold = dca_main_defaults$threshold,
       net_benefit = 0,
-      strategy = "Treat none"
+      strategy = "Assess none"
     )
   )
   stopifnot(nrow(dca_main_reference) == 200L)
@@ -1822,12 +1822,12 @@ if ("original_full" %in% dca_mean$scenario) {
     ) +
     scale_linetype_manual(
       values = c(
-        "Treat all" = "dashed",
-        "Treat none" = "dotted"
+        "Assess all" = "dashed",
+        "Assess none" = "dotted"
       ),
       breaks = c(
-        "Treat all",
-        "Treat none"
+        "Assess all",
+        "Assess none"
       )
     ) +
     facet_wrap(
@@ -2140,10 +2140,14 @@ if ("original_full" %in% data$scenario) {
       ]
     }
   }
-  xgb_calibration_plot <- xgb_calibration_plot + facet_null()
+  xgb_calibration_plot <- xgb_calibration_plot + facet_null() +
+    labs(title = "XGBoost") +
+    theme(plot.title = element_text(size = 12, face = "bold", hjust = 0.5))
   xgb_dca_plot <- dca_main_plot
   xgb_dca_plot$data <- dca_main[dca_main$algorithm == "xgboost", ]
-  xgb_dca_plot <- xgb_dca_plot + facet_null()
+  xgb_dca_plot <- xgb_dca_plot + facet_null() +
+    labs(title = "XGBoost") +
+    theme(plot.title = element_text(size = 12, face = "bold", hjust = 0.5))
   figure_3 <- patchwork::wrap_plots(
     xgb_calibration_plot, xgb_dca_plot,
     ncol = 2
@@ -2187,7 +2191,19 @@ if (all(c("original_full", "smotenc_full") %in% data$scenario)) {
         x <- x[match(ids, x$patient_id), ]
         stopifnot(identical(x$patient_id, ids), identical(x$y_high, reference_y))
         evaluate_sampling <- function(weights) {
-          c(performance_metrics(x, weights)[c("roc_auc", "pr_auc")],
+          g <- match(x$p_high_raw, sort(unique(x$p_high_raw), decreasing = TRUE))
+          pos <- as.numeric(rowsum(weights * x$y_high, g, reorder = TRUE))
+          neg <- as.numeric(rowsum(weights * (1 - x$y_high), g, reorder = TRUE))
+          keep <- pos + neg > 0
+          pos <- pos[keep]
+          neg <- neg[keep]
+          stopifnot(sum(pos) > 0, sum(neg) > 0)
+          recall <- c(0, cumsum(pos) / sum(pos))
+          fpr <- c(0, cumsum(neg) / sum(neg))
+          precision <- c(1, cumsum(pos) / cumsum(pos + neg))
+          c(
+            roc_auc = sum(diff(fpr) * (head(recall, -1) + tail(recall, -1)) / 2),
+            pr_auc = sum(diff(recall) * (head(precision, -1) + tail(precision, -1)) / 2),
             brier = sum(weights * (x$p_high_raw - x$y_high)^2) / sum(weights)
           )
         }

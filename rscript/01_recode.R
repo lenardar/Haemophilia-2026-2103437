@@ -1,7 +1,8 @@
 # 血友病成人调查数据编码 ----
 # 在项目根目录运行：Rscript rscript/01_recode.R
 # 或指定项目目录：Rscript /path/to/01_recode.R /path/to/hemophilia
-# 跳题等尚待核对的旧规则保留在 code_book$review_note 中。
+# 在向调研团队获取到原始问卷后，已核对并更新跳题说明。
+# 修正了一些码本手动编码时输错的字段名，比如values少输了s
 
 library(dplyr)
 library(tidyr)
@@ -22,12 +23,6 @@ stopifnot(file.exists(input_file), dir.exists(interim_dir))
 # 数据导入与字段映射 ----
 
 source_data <- read_excel(input_file, sheet = "成人")
-stopifnot(
-  ncol(source_data) == 55L,
-  names(source_data)[1] == "序号",
-  names(source_data)[51] == "ABR",
-  names(source_data)[52] == "AJBR"
-)
 raw_data <- source_data
 
 colnames_data <- data.frame(column_names = colnames(raw_data))
@@ -282,6 +277,7 @@ code_book <- code_book |>
   )
 
 # v11:职业 ----
+# 优化跳过项命名，no -> not_applicable，表示不适用
 
 raw_data <- raw_data |>
   mutate(v11 = case_when(
@@ -293,12 +289,12 @@ raw_data <- raw_data |>
     v11 == "专业技术人员" ~ "technician",
     v11 == "企业管理人员" ~ "manager",
     v11 == "国家公务员" ~ "civil_servant",
-    v11 == "(跳过)" ~ "no",
+    v11 == "(跳过)" ~ "not_applicable",
     TRUE ~ as.character(v11)
   )) |>
   mutate(v11 = factor(v11, levels = c(
     "freelancer", "worker", "staff", "self_employed",
-    "farmer", "technician", "manager", "civil_servant", "no"
+    "farmer", "technician", "manager", "civil_servant", "not_applicable"
   )))
 
 code_book <- code_book |>
@@ -311,7 +307,7 @@ code_book <- code_book |>
       staff: 职员; self_employed: 个体经营者;
       farmer: 农民; technician: 专业技术人员;
       manager: 企业管理人员; civil_servant: 国家公务员;
-      no: (跳过)
+      not_applicable: 不适用（无业、学生或退休，按问卷规则跳过）
     "
   ) |>
   bind_rows(
@@ -669,6 +665,8 @@ code_book <- code_book |>
   )
 
 # v25:多久参与血友病评估 ----
+# 问卷最后一项“大于每年一次”在本分析中解释为复诊间隔超过12个月，
+# 对应 above_12_months。
 
 raw_data <- raw_data |>
   mutate(v25 = case_when(
@@ -758,6 +756,8 @@ code_book <- code_book |>
   )
 
 # v28:定期接受血友病多学科综合治疗时间 ----
+# 前题回答“从未接受过多学科诊疗”的患者跳过本题，编码为 never_received。
+# “不记得诊疗间隔”和“不定期接受诊疗”我们都保留为独立类别
 
 raw_data <- raw_data |>
   mutate(v28 = case_when(
@@ -767,14 +767,14 @@ raw_data <- raw_data |>
     v28 == "每隔2年以上" ~ "above_2_years",
     v28 == "没有时间规律，不定期" ~ "no_regular",
     v28 == "我不记得了" ~ "not_remember",
-    v28 == "(跳过)" ~ "no",
+    v28 == "(跳过)" ~ "never_received",
     TRUE ~ as.character(v28)
   )) |>
   mutate(v28 = factor(
     v28,
     levels = c(
       "within_6_months", "6_12_months", "1_2_years",
-      "above_2_years", "no_regular", "not_remember", "no"
+      "above_2_years", "no_regular", "not_remember", "never_received"
     )
   ))
 
@@ -789,7 +789,7 @@ code_book <- code_book |>
       1_2_years: 每隔1年~2年（含2年）;
       above_2_years: 每隔2年以上;
       no_regular: 没有时间规律，不定期;
-      not_remember: 我不记得了; no: (跳过)
+      not_remember: 我不记得了; never_received: 从未接受过多学科诊疗
     "
   ) |>
   bind_rows(
@@ -798,6 +798,10 @@ code_book <- code_book |>
   )
 
 # v29:接受血友病多学科综合治疗多少年？ ----
+# 年限题的跳题原因包括从未接受、不定期接受、间隔超过两年及不记得诊疗间隔，
+# 由于问卷设计，无法统一解释为0年，也无法根据现有资料确定插补的年限。
+# 因此，v29不纳入模型训练，但是在代码中同样编码处理；v27诊疗经历和v28诊疗频率保留为候选变量。
+
 
 raw_data <- raw_data |>
   mutate(v29 = case_when(
@@ -809,7 +813,7 @@ raw_data <- raw_data |>
 code_book <- code_book |>
   filter(variable == "v29") |>
   mutate(
-    description = "定期接受血友病多学科综合治疗的年限；旧规则将跳过记为0，待核对跳题逻辑",
+    description = "定期接受血友病多学科综合治疗的年限；不纳入模型训练",
     type = "numeric",
     values = ""
   ) |>
@@ -912,15 +916,15 @@ raw_data <- raw_data |>
   mutate(across(starts_with("v31_"), ~ factor(.x, levels = c("no", "yes"))))
 
 code_book <- code_book |>
-  filter(variable == "v30") |>
+  filter(variable == "v31") |>
   mutate(
-    description = "从患者组织获得哪些帮助，未映射，创建了多个二分类变量",
+    description = "向患者组织寻求过哪些支持，原始多选回答拆分为多个二分类变量",
     type = "categorical",
     values = ""
   ) |>
   bind_rows(
     code_book |>
-      filter(variable != "v30")
+      filter(variable != "v31")
   )
 
 code_book <- code_book |>
@@ -966,7 +970,7 @@ code_book <- code_book |>
   mutate(
     description = "血友病分型",
     type = "categorical",
-    value = "A: A (甲）; B: B (乙）"
+    values = "A: A (甲）; B: B (乙）"
   ) |>
   bind_rows(
     code_book |>
@@ -1138,6 +1142,9 @@ code_book <- code_book |>
   )
 
 # v40:使用哪种凝血因子/非凝血因子治疗 ----
+# 各药品指标表示是否报告使用该药品：选中记为yes，未选中记为no。
+# 回答“不清楚”者的具体药品指标均为no，同时将not_sure记为yes；
+# 此时具体药品的no表示未报告使用，不代表事实上未使用。
 
 raw_data <- raw_data |>
   mutate(v40_recombinant_factor = if_else(
@@ -1321,7 +1328,7 @@ raw_data <- raw_data |>
 code_book <- code_book |>
   filter(variable == "v44") |>
   mutate(
-    description = "不规律使用的原因，未映射，但是创建了多个二值变量",
+    description = "选择注射频率的原因，原始多选回答拆分为多个二分类变量",
     type = "categorical",
     values = ""
   ) |>
@@ -1338,14 +1345,14 @@ code_book <- code_book |>
         "v44_objective_conditions", "v44_personal_reasons", "v44_other"
       ),
       original_name = c(
-        "不规律使用原因-医生建议", "不规律使用原因-经济、价格因素",
-        "不规律使用原因-症状的变化", "不规律使用原因-客观条件不便",
-        "不规律使用原因-个人主观原因", "不规律使用原因-其他"
+        "选择注射频率的原因-医生建议", "选择注射频率的原因-经济、价格因素",
+        "选择注射频率的原因-症状的变化", "选择注射频率的原因-客观条件不便",
+        "选择注射频率的原因-个人主观原因", "选择注射频率的原因-其他"
       ),
       description = c(
-        "是否因为医生建议而不规律使用", "是否因为经济、价格因素而不规律使用",
-        "是否因为症状的变化而不规律使用", "是否因为客观条件不便而不规律使用",
-        "是否因为个人主观原因而不规律使用", "是否因为其他原因而不规律使用"
+        "是否因为医生建议而选择该注射频率", "是否因为经济、价格因素而选择该注射频率",
+        "是否因为症状的变化而选择该注射频率", "是否因为客观条件不便而选择该注射频率",
+        "是否因为个人主观原因而选择该注射频率", "是否因为其他原因而选择该注射频率"
       ),
       type = rep("categorical", 6),
       values = rep("yes: 是; no: 否", 6)
@@ -1543,6 +1550,10 @@ code_book <- code_book |>
   )
 
 # v52:您有哪些部位是靶关节？ ----
+# 靶关节按问卷定义由患者自报：同一关节连续6个月内自发性出血至少3次；
+# 此后连续12个月内该关节出血不超过2次，则不再视为靶关节。
+# 由于问卷询问是未记录靶关节日期，其时间窗口可能与结局重叠。
+# 本变量用于横断面的探索性分析；SHAP反映其对模型输出的贡献，不讨论因果效应。
 
 raw_data <- raw_data |>
   mutate(v52_left_knee = if_else(
@@ -1739,23 +1750,25 @@ code_book$shap_display[code_book$variable %in% ordinal_variables] <-
   "ordered_categories_in_factor_level_order"
 code_book$review_note <- ""
 code_book$review_note[code_book$variable %in% c("v1", "v2", "v3")] <-
-  "样本内常量；保留用于人群描述，不提供预测信息"
+  "所有人的取值都一样，保留作人群描述，不放进模型。"
 code_book$review_note[code_book$variable == "v15"] <-
-  "当前与v9逐行一致；后续建模时避免重复纳入"
+  "这一列和v9完全相同，建模只用v9。"
 code_book$review_note[code_book$variable == "v11"] <-
-  "no表示职业题跳过（无业、学生、退休），不等同于没有工作"
+  "无业、学生和退休者不用回答职业题，统一记为not_applicable。"
 code_book$review_note[code_book$variable %in% c("v22", "v23")] <-
-  "旧规则将跳过记为0；需结合v21和原问卷核实"
+  "前一题回答没有相关就诊的人会跳过住院题，这里的住院次数记为0。"
 code_book$review_note[code_book$variable == "v28"] <-
-  "no表示跳过，not_remember表示不记得；需结合v27解释"
+  "从未接受过多学科诊疗的人跳过本题，记为never_received；不记得多久做一次的，记为not_remember。"
 code_book$review_note[code_book$variable == "v29"] <-
-  "待确认：跳过统一记0混合从未治疗、不定期、不记得等来源"
+  "这道题有几种跳过原因：从未接受、不定期、间隔超过两年或不记得间隔。中间数据仍用0记录跳题，但这些0不都表示零年，因此建模不再使用这一列。"
 code_book$review_note[startsWith(code_book$variable, "v31_")] <-
-  "当前拆分不能区分未选择与跳过；需核对问卷逻辑"
+  "选过的支持项目记为yes，没选的记为no。没有联系过患者组织的人会跳过本题，各项支持都记为no。"
+code_book$review_note[code_book$variable == "v31_no_option"] <-
+  "这一列记录有没有一项支持都没选：一项都没选记为yes，选过任意一项记为no。"
 code_book$review_note[code_book$variable %in% c("v47", "v48")] <-
-  "not_sure为明确报告的未知状态，不并入no"
+  "回答“不确定”或“不清楚”的人单独记为not_sure。"
 code_book$review_note[code_book$variable == "v43"] <-
-  "原始表派生字段；少于每周一次含两种治疗分类，需确认派生规则"
+  "这一列沿用数据提供方给出的治疗分类。"
 
 stopifnot(nrow(recode_data) == nrow(source_data))
 stopifnot(!anyDuplicated(recode_data$id))
@@ -1790,4 +1803,4 @@ message(
 )
 message("中间数据目录：", interim_dir)
 message("覆盖前备份：", backup_dir)
-message("跳题含义等待确认事项见 code_book.csv 的 review_note 列。")
+message("变量含义与编码规则见 code_book.csv 的 review_note 列。")

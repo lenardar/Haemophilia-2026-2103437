@@ -4,12 +4,11 @@
 profile <- "full" # 正式训练；快速检查时改为 "smoke"。
 workers <- 4L # 正式运行使用四个并行进程。
 # 取消注释即可加入本次运行；只运行下面选中的实验。
-# First run: original_full and smotenc_full.
-# Second run: set selected_scenarios to c("original_restricted").
-# Enter the two completed run IDs in report_config.R before running 04-06.
 selected_scenarios <- c(
-  "original_full",
-  "smotenc_full"
+  "original_full",      # 不过采样 + 全部变量
+  "smotenc_full",       # 过采样 + 全部变量
+  # "smotenc_restricted", # 过采样 + 排除争议变量
+  "original_restricted"  # 不过采样 + 排除争议变量
 )
 project_dir <- getwd()
 

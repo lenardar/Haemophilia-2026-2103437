@@ -92,8 +92,6 @@ feature_labels <- c(
   v13 = "Annual household income",
   v16_osteoarthritis = "Osteoarthritis",
   v19 = "Receipt of medical charitable aid",
-  v29 = "Years of regular multidisciplinary care",
-  v31_charity_donation = "Charitable support sought from patient organizations",
   v32 = "Hemophilia type",
   v33 = "Hemophilia severity",
   v34 = "Age at diagnosis",

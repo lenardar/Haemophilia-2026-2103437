@@ -62,8 +62,8 @@ supplement_inputs <- c(
 )
 report <- start_report(
   project_dir, run_id, "tables",
-  c(input_paths, prediction_file, restricted_prediction_file,
-    metadata_files, predictor_metadata_file, supplement_inputs), run_stamp
+  unique(c(input_paths, prediction_file, restricted_prediction_file,
+    metadata_files, predictor_metadata_file, supplement_inputs)), run_stamp
 )
 tables <- lapply(input_paths, readr::read_csv, show_col_types = FALSE)
 labels <- c(
@@ -306,7 +306,7 @@ export_table(
     "Restricted - main (95% CI)"),
   do.call(rbind, sensitivity_rows),
   c(
-    "Main: no oversampling, 89 candidate predictors. SMOTENC: oversampling, 89 candidates. Restricted: no oversampling, 71 candidates. High ABR (>1) is the positive class.",
+    "Main: no oversampling, 88 candidate predictors. SMOTENC: oversampling, 88 candidates. Restricted: no oversampling, 70 candidates. High ABR (>1) is the positive class.",
     "Values are equal-weight means across five outer test folds. Positive AUC differences and negative Brier differences favor the sensitivity scenario.",
     "95% CIs use 2,000 paired patient bootstrap samples within folds. Fixed predictions; intervals exclude retraining variability and overlapping training-set dependence. No multiplicity adjustment.",
     "Excluded: osteoarthritis, arthritis, any comorbidity/complication, joint surgery, hemophilia-related disability, symptom change as a reason for injection frequency, home rehabilitation/physical therapy, and 11 target-joint indicators.",
@@ -396,6 +396,7 @@ for (i in seq_len(nrow(questionnaire_dictionary))) {
       v22 = "Excluded: bleeding-related healthcare utilization",
       v23 = "Excluded: bleeding-related healthcare utilization",
       v24 = "Excluded: bleeding-related healthcare utilization",
+      v29 = "Excluded: ambiguous interpretation of skipped duration responses",
       v41 = "Excluded: incompatible dose units",
       v48 = "Excluded: bleeding outcome-proximal item",
       v49 = "Excluded: bleeding outcome-proximal item",
@@ -442,8 +443,8 @@ definitions <- do.call(rbind, definition_rows)
 stopifnot(
   nrow(definitions) == 54L,
   nrow(registry) == ncol(encoded),
-  sum(registry$include_full) == 89L,
-  sum(registry$include_restricted) == 71L,
+  sum(registry$include_full) == 88L,
+  sum(registry$include_restricted) == 70L,
   !anyNA(encoded)
 )
 
@@ -457,7 +458,7 @@ supplement_specs$table_s1_variables_missingness <- list(
     "Table S1. Definitions and coding information for candidate predictors",
     definitions[c("Variable", "Definition", "Coding_and_reference", "Model_inclusion")],
     c(
-      "Notes: Each of the 54 supplied source fields is listed once. Multiple-response items generate separate binary predictors. The encoded dataset contains 113 fields, including the record identifier; 89 predictors are eligible in the full set and 71 in the restricted set. The identifier is excluded from all models.",
+      "Notes: Each of the 54 supplied source fields is listed once. Multiple-response items generate separate binary predictors. The encoded dataset contains 113 fields, including the record identifier; 88 predictors are eligible in the full set and 70 in the restricted set. The identifier is excluded from all models.",
       "Coding describes the dataset actually analyzed; differences between the questionnaire and supplied categories are stated explicitly. All measures are respondent-reported, including reports of diagnoses.",
       "References describe treatment coding for factor-based contrasts; binary no/yes indicators use 0/1 before model-specific preprocessing. Naive Bayes retains factors. Continuous variables have no categorical reference.",
       "No encoded fields contain NA in the 1,765 supplied adult records. Questionnaire skips and explicit uncertain responses are handled as described for the relevant variables. This does not establish absence of missingness before data delivery.",

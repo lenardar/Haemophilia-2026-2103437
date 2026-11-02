@@ -1,9 +1,8 @@
-# Replace these historical IDs with your completed training run IDs.
 # 04/05/06共用展示配置；训练配置仍在analysis_config.R。 ----
 report_config <- function() {
   list(
-    run_id = "full_20261005_101934",
-    restricted_run_id = "full_20261006_095146",
+    run_id = "full_20261030_130408",
+    restricted_run_id = "full_20261030_130408",
     plot_format = "png", # 每次只导出一种格式：png、pdf或tiff。
     model_labels = c(
       logistic = "Logistic regression",
